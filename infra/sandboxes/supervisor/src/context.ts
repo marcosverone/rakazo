@@ -12,6 +12,7 @@ import {
   resolveComputerDns,
   resolveComputerEgressMode,
   resolveComputerMounts,
+  resolveComputerProxy,
   resolveScreenNetworkMode,
   resolveTeamScreenLimit,
 } from "./computer-spec.js";
@@ -33,6 +34,7 @@ export const supervisorToken = resolveSupervisorToken(process.env);
 export const screenNetworkMode = resolveScreenNetworkMode(process.env.SANDBOX_SCREEN_NETWORK);
 export const computerEgressSetting = resolveComputerEgressMode();
 export const computerDns = resolveComputerDns();
+export const computerProxy = resolveComputerProxy();
 export const computerMounts = resolveComputerMounts(undefined, [dataDir, dockerSocketPath]);
 // Docker follows symlinks in a bind source, so also check where a locally visible source points.
 assertComputerMountSources(

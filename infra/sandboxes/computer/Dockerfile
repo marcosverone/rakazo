@@ -67,6 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     procps \
     bash \
+    tinyproxy \
     $([ "$BROWSER" = chromium ] && echo chromium) \
     fonts-liberation \
     fonts-dejavu-core \
@@ -203,6 +204,7 @@ COPY --chmod=755 rakazo-browser /usr/local/bin/rakazo-browser
 COPY --chmod=755 rakazo-focus-or-launch /usr/local/bin/rakazo-focus-or-launch
 COPY --chmod=755 rakazo-page-browser /usr/local/bin/rakazo-page-browser
 COPY --chmod=644 page_secrets.py /usr/local/lib/rakazo/page_secrets.py
+COPY --chmod=644 computer-proxy.py /usr/local/lib/rakazo/computer-proxy.py
 COPY --chmod=644 rakazo-browser.desktop /usr/share/applications/rakazo-browser.desktop
 # Rakazo keeps credentials itself; the browser's save prompts would cover pages.
 # Pop-ups open: one a page opens after making a report would be blocked unseen.
@@ -221,7 +223,7 @@ COPY --chmod=644 rakazo-local-bin.sh /etc/profile.d/rakazo-local-bin.sh
 # Strip CR so shebangs work even if the build context came from a CRLF checkout.
 RUN ldconfig \
   && sed -i 's/\r$//' /usr/local/bin/rakazo-computer /usr/local/lib/rakazo-user-env.sh /usr/local/bin/rakazo-computer-control /usr/local/bin/rakazo-browser /usr/local/bin/rakazo-focus-or-launch /usr/local/bin/rakazo-page-browser \
-    /usr/local/lib/rakazo/page_secrets.py \
+    /usr/local/lib/rakazo/page_secrets.py /usr/local/lib/rakazo/computer-proxy.py \
     /etc/rakazo/fluxbox/init /etc/rakazo/fluxbox/apps /etc/rakazo/fluxbox/menu \
     /etc/profile.d/rakazo-local-bin.sh
 # Agent-authored scripts often use the unversioned name. Keep it on the installed Python 3.

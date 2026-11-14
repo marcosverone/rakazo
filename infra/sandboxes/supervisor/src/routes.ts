@@ -27,6 +27,7 @@ import {
   computerMountsMatch,
   computerNetworkNameFor,
   computerNetworkOwnerFor,
+  computerProxyMatches,
   containerCreateOptions,
   containerNameFor,
   controlPortPublicationMatches,
@@ -40,6 +41,7 @@ import {
 import {
   computerDns,
   computerMounts,
+  computerProxy,
   controlViaLoopback,
   dataDir,
   docker,
@@ -257,6 +259,8 @@ app.post("/computers", async (c) => {
           computerMountsMatch(info, computerMounts) &&
           // So are the owner's time zone and language.
           computerLocaleMatches(info.Config.Env, locale) &&
+          // And the browser proxy.
+          computerProxyMatches(info.Config.Env, computerProxy) &&
           controlPublishOk &&
           (!storage.homeVolume || homeVolumeMatches(info.HostConfig.Mounts, storage.homeVolume)) &&
           // A computer that cannot rejoin its network is replaced below instead.
@@ -321,6 +325,7 @@ app.post("/computers", async (c) => {
           dns: computerDns,
           mounts: computerMounts,
           locale,
+          proxy: computerProxy,
         });
         let container: Docker.Container | undefined;
         const removeNamedComputer = () =>

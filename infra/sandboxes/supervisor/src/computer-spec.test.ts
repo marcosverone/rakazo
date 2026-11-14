@@ -32,6 +32,7 @@ import {
   computerNetworkNameFor,
   computerNetworkNamesForCleanup,
   computerNetworkOwnerFor,
+  computerProxyMatches,
   containerCreateOptions,
   containerNameFor,
   controlPortPublicationMatches,
@@ -47,6 +48,7 @@ import {
   resolveComputerEgressMode,
   resolveComputerImage,
   resolveComputerMounts,
+  resolveComputerProxy,
   resolveScreenNetworkMode,
   resolveScreenPublishTarget,
   resolveSpaceComputerLimit,
@@ -377,6 +379,47 @@ describe("graphical computer spec", () => {
     expect(computerDnsMatches(null, ["1.1.1.1"])).toBe(false);
     expect(computerDnsMatches(["1.1.1.1"], undefined)).toBe(false);
     expect(computerDnsMatches(["1.0.0.1", "1.1.1.1"], ["1.1.1.1", "1.0.0.1"])).toBe(false);
+  });
+
+  it("accepts an upstream proxy and rejects a malformed one without echoing it", () => {
+    expect(resolveComputerProxy(undefined)).toBeUndefined();
+    expect(resolveComputerProxy("  ")).toBeUndefined();
+    expect(resolveComputerProxy("socks5://user:pass@proxy.example.test:1080")).toBe(
+      "socks5://user:pass@proxy.example.test:1080",
+    );
+    expect(resolveComputerProxy("http://proxy.example.test:8080")).toBe(
+      "http://proxy.example.test:8080",
+    );
+    for (const bad of [
+      "ftp://user:secretvalue@proxy.example.test",
+      "not a url",
+      "socks5://user:sec ret value@proxy.example.test:1080",
+      "socks5://us%3Aer:secretvalue@proxy.example.test:1080",
+    ]) {
+      expect(() => resolveComputerProxy(bad)).toThrow(/RAKAZO_COMPUTER_PROXY/);
+      expect(() => resolveComputerProxy(bad)).not.toThrow(/secretvalue|sec ret/);
+    }
+  });
+
+  it("passes the proxy to the computer and matches it on reuse", () => {
+    const base = {
+      name: "rakazo-computer-bot_1",
+      image: COMPUTER_IMAGE,
+      botId: "bot_1",
+      spaceId: "space_1",
+      homePath: "/data/homes/bot_1",
+    };
+    const proxy = "socks5://user:pass@proxy.example.test:1080";
+    const withProxy = containerCreateOptions({ ...base, proxy }).Env;
+    expect(withProxy).toContain(`RAKAZO_COMPUTER_PROXY=${proxy}`);
+    expect(
+      containerCreateOptions(base).Env.some((e) => e.startsWith("RAKAZO_COMPUTER_PROXY=")),
+    ).toBe(false);
+    expect(computerProxyMatches(withProxy, proxy)).toBe(true);
+    expect(computerProxyMatches(null, undefined)).toBe(true);
+    expect(computerProxyMatches(withProxy, undefined)).toBe(false);
+    expect(computerProxyMatches([], proxy)).toBe(false);
+    expect(computerProxyMatches(withProxy, "socks5://other.example.test:1080")).toBe(false);
   });
 
   it("derives deterministic host bridge names within the 15-byte interface limit", () => {

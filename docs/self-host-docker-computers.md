@@ -32,6 +32,25 @@ browsers otherwise start only when needed. `0`, the default, leaves each to the 
 The supervisor reaches Docker at `/var/run/docker.sock` (or `//./pipe/docker_engine` on Windows). Set
 `DOCKER_SOCKET` for rootless Docker, Colima or another path; `DOCKER_HOST` wins when both are set.
 
+## Browser proxy
+
+Set `RAKAZO_COMPUTER_PROXY` on the supervisor to send every computer's browser through an
+upstream proxy, for example `socks5://user:pass@proxy.example.com:1080` or
+`http://user:pass@proxy.example.com:8080`. Chromium cannot send proxy credentials, so each
+computer runs a small proxy on `127.0.0.1:18080` that forwards to the upstream with them, and the
+browser is started with it. Loopback stays direct.
+
+The setting applies to every bot and covers the browser only: terminal commands go direct. The
+username cannot contain spaces, `:`, `@` or `"`, and the password cannot contain spaces, `@` or
+`"`; percent-encode anything else unusual. A malformed value stops the supervisor at startup, and
+a computer whose proxy fails to start does not start, so the browser never goes out directly by
+mistake. A computer picks up a change the next time it is provisioned. The credentials are
+readable by processes inside that computer, which includes anything the bot runs.
+
+The image must include the proxy, so build the computer image from this checkout; the stock image
+does not have it. A custom build needs `tinyproxy`, `computer-proxy.py` and the matching `start.sh` and
+`rakazo-browser`.
+
 ## Restricted computer egress
 
 Restricted egress gives Docker computers the public internet (browsing, DNS, apt, git

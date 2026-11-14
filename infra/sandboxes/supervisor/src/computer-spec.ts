@@ -41,6 +41,7 @@ export const COMPUTER_IMAGE_CONTEXT_FILES = [
   "rakazo-focus-or-launch",
   "rakazo-page-browser",
   "page_secrets.py",
+  "computer-proxy.py",
   "install-agent-browser.sh",
   "rakazo-browser.desktop",
   "browser-policy.json",
@@ -248,6 +249,46 @@ export function computerDnsMatches(current: string[] | null | undefined, desired
   const have = current ?? [];
   const want = desired ?? [];
   return have.length === want.length && have.every((server, index) => server === want[index]);
+}
+
+/**
+ * An upstream proxy for every computer's browser, from RAKAZO_COMPUTER_PROXY: http://, socks5:// or
+ * socks4:// with optional credentials. Each computer runs a loopback proxy that adds them, because
+ * Chromium cannot. Checked here so a malformed value stops the supervisor at startup; the error
+ * never repeats the value, which can hold a password.
+ */
+export function resolveComputerProxy(
+  value = process.env.RAKAZO_COMPUTER_PROXY,
+): string | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  const fail = (reason: string): never => {
+    throw new Error(`RAKAZO_COMPUTER_PROXY ${reason}`);
+  };
+  let url: URL | undefined;
+  try {
+    url = new URL(raw);
+  } catch {
+    fail("is not a valid URL");
+  }
+  if (!url || !["http:", "socks5:", "socks5h:", "socks4:"].includes(url.protocol)) {
+    return fail("must start with http://, socks5:// or socks4://");
+  }
+  if (!url.hostname) fail("needs a host");
+  // The loopback proxy reads "user:pass@host:port" without decoding, so these would split it.
+  const username = decodeURIComponent(url.username);
+  const password = decodeURIComponent(url.password);
+  if (/[\s:@"]/.test(username) || /[\s@"]/.test(password)) {
+    fail("cannot have spaces, '@' or '\"' in its credentials, or ':' in the username");
+  }
+  return raw;
+}
+
+/** Whether a computer runs with this proxy; the environment is fixed when it is created. */
+export function computerProxyMatches(env: string[] | null | undefined, desired?: string) {
+  const prefix = "RAKAZO_COMPUTER_PROXY=";
+  const have = (env ?? []).find((entry) => entry.startsWith(prefix))?.slice(prefix.length);
+  return (have ?? undefined) === desired;
 }
 
 /** A host directory mounted into every computer (SANDBOX_COMPUTER_MOUNTS). */
@@ -584,6 +625,7 @@ export interface ComputerCreateInput {
   dns?: string[];
   mounts?: ComputerMount[];
   locale?: ComputerLocale;
+  proxy?: string;
 }
 
 interface PointerInput {
@@ -616,6 +658,7 @@ export function containerCreateOptions(input: ComputerCreateInput) {
       "PIP_USER=1",
       ...(input.controlToken ? [`RAKAZO_COMPUTER_CONTROL_TOKEN=${input.controlToken}`] : []),
       ...computerLocaleEnv(input.locale),
+      ...(input.proxy ? [`RAKAZO_COMPUTER_PROXY=${input.proxy}`] : []),
     ],
     Labels: {
       "rakazo.managed": "true",

@@ -54,6 +54,28 @@ if [[ "$ready" -ne 1 ]]; then
   exit 1
 fi
 
+# Optional upstream proxy for the browser. Chromium cannot send proxy credentials itself, so a
+# tinyproxy on loopback adds them. It fails closed: a computer that cannot start the proxy does not
+# start, so the browser never quietly goes out directly.
+rm -f /tmp/rakazo/browser-proxy
+if [[ -n "${RAKAZO_COMPUTER_PROXY:-}" ]]; then
+  python3 /usr/local/lib/rakazo/computer-proxy.py /tmp/rakazo/tinyproxy.conf || exit 1
+  tinyproxy -d -c /tmp/rakazo/tinyproxy.conf >/tmp/rakazo/tinyproxy.out 2>&1 &
+  proxy_ready=0
+  for _ in $(seq 1 50); do
+    if (exec 3<>/dev/tcp/127.0.0.1/18080) 2>/dev/null; then
+      proxy_ready=1
+      break
+    fi
+    sleep 0.1
+  done
+  if [[ "$proxy_ready" -ne 1 ]]; then
+    echo "the computer proxy did not start" >&2
+    exit 1
+  fi
+  printf 'http://127.0.0.1:18080\n' > /tmp/rakazo/browser-proxy
+fi
+
 if command -v dbus-launch >/dev/null 2>&1; then
   eval "$(dbus-launch --sh-syntax)"
   # rakazo-browser is launched later without this session's environment; the
