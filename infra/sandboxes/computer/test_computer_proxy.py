@@ -1,4 +1,4 @@
-"""Offline tests for the loopback proxy config that RAKAZO_COMPUTER_PROXY produces."""
+"""Offline tests for the loopback proxy config built from the mounted upstream proxy file."""
 import os
 from pathlib import Path
 import stat
@@ -52,10 +52,10 @@ class CommandTests(unittest.TestCase):
     def run_script(self, value):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "tinyproxy.conf"
-            env = {**os.environ, "RAKAZO_COMPUTER_PROXY": value}
+            source = Path(tmp) / "proxy"
+            source.write_text(value + "\n")
             result = subprocess.run(
-                [sys.executable, str(HERE / "computer-proxy.py"), str(path)],
-                env=env,
+                [sys.executable, str(HERE / "computer-proxy.py"), str(source), str(path)],
                 capture_output=True,
                 text=True,
             )

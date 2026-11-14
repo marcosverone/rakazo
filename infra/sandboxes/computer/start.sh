@@ -54,12 +54,13 @@ if [[ "$ready" -ne 1 ]]; then
   exit 1
 fi
 
-# Optional upstream proxy for the browser. Chromium cannot send proxy credentials itself, so a
-# tinyproxy on loopback adds them. It fails closed: a computer that cannot start the proxy does not
-# start, so the browser never quietly goes out directly.
+# Optional upstream proxy for the browser, named in a file the operator mounts at
+# /mnt/rakazo-proxy/proxy. Chromium cannot send proxy credentials itself, so a tinyproxy on loopback
+# adds them. It fails closed: a computer that cannot start the proxy does not start, so the browser
+# never quietly goes out directly.
 rm -f /tmp/rakazo/browser-proxy
-if [[ -n "${RAKAZO_COMPUTER_PROXY:-}" ]]; then
-  python3 /usr/local/lib/rakazo/computer-proxy.py /tmp/rakazo/tinyproxy.conf || exit 1
+if [[ -s /mnt/rakazo-proxy/proxy ]]; then
+  python3 /usr/local/lib/rakazo/computer-proxy.py /mnt/rakazo-proxy/proxy /tmp/rakazo/tinyproxy.conf || exit 1
   tinyproxy -d -c /tmp/rakazo/tinyproxy.conf >/tmp/rakazo/tinyproxy.out 2>&1 &
   proxy_ready=0
   for _ in $(seq 1 50); do

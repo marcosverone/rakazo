@@ -34,22 +34,20 @@ The supervisor reaches Docker at `/var/run/docker.sock` (or `//./pipe/docker_eng
 
 ## Browser proxy
 
-Set `RAKAZO_COMPUTER_PROXY` on the supervisor to send every computer's browser through an
-upstream proxy, for example `socks5://user:pass@proxy.example.com:1080` or
-`http://user:pass@proxy.example.com:8080`. Chromium cannot send proxy credentials, so each
-computer runs a small proxy on `127.0.0.1:18080` that forwards to the upstream with them, and the
-browser is started with it. Loopback stays direct.
+To send every computer's browser through an upstream proxy, put its URL in a file named `proxy`
+(`socks5://user:pass@proxy.example.com:1080`, `socks4://...` or `http://user:pass@...:8080`) in a
+host directory, and mount that directory at `/mnt/rakazo-proxy` with `SANDBOX_COMPUTER_MOUNTS`
+(for example `/srv/rakazo-proxy:/mnt/rakazo-proxy`). Chromium cannot send proxy credentials, so
+each computer runs a small proxy on `127.0.0.1:18080` that forwards with them, and the browser is
+started through it. Loopback stays direct.
 
 The setting applies to every bot and covers the browser only: terminal commands go direct. The
 username cannot contain spaces, `:`, `@` or `"`, and the password cannot contain spaces, `@` or
-`"`; percent-encode anything else unusual. A malformed value stops the supervisor at startup, and
-a computer whose proxy fails to start does not start, so the browser never goes out directly by
-mistake. A computer picks up a change the next time it is provisioned. The credentials are
-readable by processes inside that computer, which includes anything the bot runs.
-
-The image must include the proxy, so build the computer image from this checkout; the stock image
-does not have it. A custom build needs `tinyproxy`, `computer-proxy.py` and the matching `start.sh` and
-`rakazo-browser`.
+`"`; percent-encode anything else unusual. A computer whose proxy cannot start does not start, so
+the browser never goes out directly by mistake. A computer reads the file when it starts, and
+every process in it, including anything the bot runs, can read the credentials. Use a proxy account
+meant for this. The computer image must include the proxy (`tinyproxy` and `computer-proxy.py`), so
+build it from a checkout that has them; the published image does not.
 
 ## Restricted computer egress
 
